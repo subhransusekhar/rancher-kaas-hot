@@ -1,4 +1,4 @@
-heat_template_version: queens
+heat_template_version: newton
 
 description: Rancher KaaS Cluster Nodes.
 
@@ -6,9 +6,7 @@ parameters:
   public_net_name:
     type: string
     description: public/external net name
-    default: floating_net
-    constraints:
-      - custom_constraint: neutron.network
+    default: external
   internal_network_id:
     type: string
     description: tenant internal net id
