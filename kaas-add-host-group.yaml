@@ -1,0 +1,71 @@
+heat_template_version: queens
+
+description: Rancher KaaS Cluster Nodes.
+
+parameters:
+  public_net_name:
+    type: string
+    description: public/external net name
+    default: floating_net
+  internal_network_id:
+    type: string
+    description: tenant internal net id
+    default: int_net
+  sec_group_name:
+    type: string
+    description: security group name
+    default: default
+  flavor_name:
+    type: string
+    description: KaaS host flavor name
+    default: kaas-flavor
+  image_name:
+    type: string
+    description: KaaS host image name
+    default: Docker
+  host_name:
+    type: string
+    description: KaaS host name
+    default: kaas-cluster
+  boot_vol_size:
+    type: number
+    description: The size of the Cinder boot volume
+    default: 60
+  cluster_role:
+    type: string
+    description: KaaS cluster role
+    default: --worker
+  join_command:
+    type: string
+    description: KaaS cluster join command
+  kaas_cluster_size:
+    type: number
+    description: No of Nodes to add
+    default: 1
+
+resources:
+  app_cluster:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: kaas_cluster_size }
+      resource_def:
+        type: https://raw.githubusercontent.com/subhransusekhar/rancher-kaas-hot/main/kaas-add-host.yaml
+        properties:
+          host_name: {get_param: host_name}
+          image_name: { get_param: image_name } 
+          flavor_name: { get_param: flavor_name }
+          public_net_name: { get_param: public_net_name }
+          internal_network_id: {get_param: internal_network_id}
+          sec_group_name: { get_param: sec_group_name } 
+          boot_vol_size: { get_param: boot_vol_size }
+          cluster_role: { get_param: cluster_role }
+          join_command: { get_param: join_command }
+outputs:
+  server_name:
+    description: >
+      List of server names that are part of the group.
+    value: {get_attr: [app_cluster, name]}
+  server_ip:
+    description: >
+      List of server IPs that are part of the group.
+    value: {get_attr: [app_cluster, first_address]}

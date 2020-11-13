@@ -1,0 +1,104 @@
+heat_template_version: queens
+
+description: Rancher KaaS Cluster Nodes.
+
+parameters:
+  public_net_name:
+    type: string
+    description: public/external net name
+    default: floating_net
+  internal_network_id:
+    type: string
+    description: tenant internal net id
+    default: int_net
+  sec_group_name:
+    type: string
+    description: security group name
+    default: default
+  flavor_name:
+    type: string
+    description: KaaS host flavor name
+    default: kaas-flavor
+  image_name:
+    type: string
+    description: KaaS host image name
+    default: Docker
+  host_name:
+    type: string
+    description: KaaS host name
+    default: kaas-cluster
+  boot_vol_size:
+    type: number
+    description: The size of the Cinder boot volume
+    default: 60
+  cluster_role:
+    type: string
+    description: KaaS cluster role
+    default: --worker
+  join_command:
+    type: string
+    description: KaaS cluster join command
+
+resources:
+  floating_ip: 
+    depends_on: [green_port] 
+    type: OS::Neutron::FloatingIP 
+    properties: 
+      floating_network_id: { get_param: public_net_name } 
+      port_id: { get_resource: green_port } 
+  green_port: 
+    type: OS::Neutron::Port 
+    properties: 
+      network: { get_param: internal_network_id }
+      security_groups: [{get_param: sec_group_name}]
+  host_vol:
+    type: OS::Cinder::Volume
+    properties:
+      size: { get_param: boot_vol_size }
+      image: { get_param: image_name }
+  cluster_host: 
+    depends_on: [green_port,host_vol] 
+    type: OS::Nova::Server 
+    properties: 
+      name: { get_param: host_name }  
+      image: { get_param: image_name } 
+      flavor: { get_param: flavor_name }
+      block_device_mapping: [{"volume_id": { get_resource: host_vol },
+                        "delete_on_termination": false, 
+                        "device_name": "vda"}]
+      networks: 
+      - port: { get_resource: green_port } 
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          params:
+            $host_name: { get_param: host_name }
+            $cluster_role: { get_param: cluster_role }
+            $join_command: { get_param: join_command }
+          template: |
+            #cloud-config
+            users:
+              - name: ubuntu
+                password: ubuntu@987!
+                sudo: ['ALL=(ALL) ALL']
+                groups: sudo
+                shell: /bin/bash
+                ssh_pwauth: True
+                lock_passwd: False
+                plain_text_passwd:  ubuntu@987!
+            package_update: true
+            packages:
+              - jq
+              - docker.io
+              - chrony
+              - open-iscsi
+            runcmd:
+              - usermod -aG docker ubuntu
+              - systemctl restart docker
+              - systemctl enable docker
+              - return=1; while [ $return != 0 ]; do sleep 2; docker ps; return=$?; done
+              - $join_command --node-name $(curl http://169.254.169.254/latest/meta-data/hostname) --address $(curl http://169.254.169.254/latest/meta-data/public-ipv4) --internal-address $(curl http://169.254.169.254/latest/meta-data/local-ipv4) $cluster_role 
+outputs:
+  cluster_vm_id:
+    description: KaaS Cluster VM
+    value: { get_resource: cluster_host }
