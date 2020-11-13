@@ -7,10 +7,14 @@ parameters:
     type: string
     description: public/external net name
     default: floating_net
+    constraints:
+      - custom_constraint: neutron.network
   internal_network_id:
     type: string
     description: tenant internal net id
     default: int_net
+    constraints:
+      - custom_constraint: neutron.network
   sec_group_name:
     type: string
     description: security group name
@@ -19,10 +23,14 @@ parameters:
     type: string
     description: KaaS host flavor name
     default: kaas-flavor
+    constraints:
+      - custom_constraint: nova.flavor
   image_name:
     type: string
     description: KaaS host image name
     default: Docker
+    constraints:
+      - custom_constraint: glance.image
   host_name:
     type: string
     description: KaaS host name
