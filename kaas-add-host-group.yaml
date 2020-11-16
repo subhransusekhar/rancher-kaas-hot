@@ -33,6 +33,10 @@ parameters:
     type: string
     description: KaaS host name
     default: kaas-cluster
+  key_name:
+    type: string
+    description: KaaS key  name
+    default: key_name
   boot_vol_size:
     type: number
     description: The size of the Cinder boot volume
@@ -66,6 +70,7 @@ resources:
           boot_vol_size: { get_param: boot_vol_size }
           cluster_role: { get_param: cluster_role }
           join_command: { get_param: join_command }
+          key_name: { get_param: key_name }
 outputs:
   server_name:
     description: >

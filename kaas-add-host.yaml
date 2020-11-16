@@ -33,6 +33,10 @@ parameters:
     type: string
     description: KaaS host name
     default: kaas-cluster
+  key_name:
+    type: string
+    description: KaaS key  name
+    default: key_name
   boot_vol_size:
     type: number
     description: The size of the Cinder boot volume
@@ -74,6 +78,7 @@ resources:
                         "device_name": "vda"}]
       networks: 
       - port: { get_resource: green_port } 
+      key_name: { get_param: key_name }
       user_data_format: RAW
       user_data:
         str_replace:
@@ -83,15 +88,6 @@ resources:
             $join_command: { get_param: join_command }
           template: |
             #cloud-config
-            users:
-              - name: ubuntu
-                password: ubuntu@987!
-                sudo: ['ALL=(ALL) ALL']
-                groups: sudo
-                shell: /bin/bash
-                ssh_pwauth: True
-                lock_passwd: False
-                plain_text_passwd:  ubuntu@987!
             package_update: true
             packages:
               - jq
